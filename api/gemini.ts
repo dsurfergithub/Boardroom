@@ -5,21 +5,15 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const appSecret = process.env.APP_SECRET;
-  if (appSecret) {
-    const authHeader = req.headers.authorization as string | undefined;
-    if (authHeader !== `Bearer ${appSecret}`) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  const apiKey =
+    (req.headers['x-gemini-key'] as string) || process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    return res.status(401).json({ error: 'Falta la API Key de Gemini' });
   }
 
   try {
     const { tarea, contexto } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Falta la API Key de Gemini' });
-    }
 
     const ai = new GoogleGenAI({ apiKey });
 
@@ -70,6 +64,9 @@ Reglas estrictas:
     let errorMessage = error.message || 'Error processing request';
     if (error.status === 429 || errorMessage.includes('429')) {
       errorMessage = 'Límite de cuota de API excedido. Por favor, inténtalo de nuevo más tarde.';
+    }
+    if (error.status === 400 || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('invalid')) {
+      errorMessage = 'API Key inválida. Pulsa en tu nombre de usuario para cambiarla.';
     }
     res.status(500).json({ error: errorMessage });
   }

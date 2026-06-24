@@ -3,34 +3,24 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
-function checkAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const appSecret = process.env.APP_SECRET;
-  if (!appSecret) return next();
-  const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${appSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-}
-
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
 
-  app.get('/api/ping', checkAuth, (_req, res) => {
+  app.get('/api/ping', (_req, res) => {
     res.status(200).json({ ok: true });
   });
 
-  // API Route for Gemini
-  app.post('/api/gemini', checkAuth, async (req, res) => {
+  app.post('/api/gemini', async (req, res) => {
     try {
       const { tarea, contexto } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
-      
+      const apiKey =
+        (req.headers['x-gemini-key'] as string) || process.env.GEMINI_API_KEY;
+
       if (!apiKey) {
-        return res.status(500).json({ error: 'Falta la API Key de Gemini' });
+        return res.status(401).json({ error: 'Falta la API Key de Gemini' });
       }
 
       const ai = new GoogleGenAI({ apiKey });
@@ -70,15 +60,11 @@ Reglas estrictas:
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
-        config: {
-          temperature: 0.6,
-        }
+        config: { temperature: 0.6 },
       });
 
       const text = response.text || '';
-      // Clean up markdown code blocks if any
       const cleanJson = text.replace(/```json|```/gi, '').trim();
-      
       const subtasks = JSON.parse(cleanJson);
       res.json({ subtasks });
 
@@ -92,22 +78,21 @@ Reglas estrictas:
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

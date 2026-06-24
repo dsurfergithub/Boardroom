@@ -7,10 +7,10 @@ import { useState } from 'react';
 import { BoardroomProvider } from './context';
 import { MainLayout } from './components/MainLayout';
 import { AuthGate } from './components/AuthGate';
-import { getToken } from './lib/auth';
+import { getGeminiKey } from './lib/auth';
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(() => !!getToken());
+  const [authenticated, setAuthenticated] = useState(() => !!getGeminiKey());
 
   if (!authenticated) {
     return <AuthGate onLogin={() => setAuthenticated(true)} />;

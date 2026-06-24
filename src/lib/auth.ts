@@ -1,24 +1,24 @@
-const STORAGE_KEY = 'boardroom_token';
+const GEMINI_KEY_STORAGE = 'boardroom_gemini_key';
 
-export function getToken(): string | null {
-  return localStorage.getItem(STORAGE_KEY);
+export function getGeminiKey(): string | null {
+  return localStorage.getItem(GEMINI_KEY_STORAGE);
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(STORAGE_KEY, token);
+export function setGeminiKey(key: string): void {
+  localStorage.setItem(GEMINI_KEY_STORAGE, key);
 }
 
-export function clearToken(): void {
-  localStorage.removeItem(STORAGE_KEY);
+export function clearGeminiKey(): void {
+  localStorage.removeItem(GEMINI_KEY_STORAGE);
 }
 
 export function getAuthHeaders(): Record<string, string> {
-  const token = getToken();
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
+  const key = getGeminiKey();
+  if (!key) return {};
+  return { 'X-Gemini-Key': key };
 }
 
 export function handleAuthError(): void {
-  clearToken();
+  clearGeminiKey();
   window.location.reload();
 }
