@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Tarjeta, AppState, Esfuerzo, Prioridad } from "../types";
 import { useBoardroom } from "../context";
+import { dateInputToTimestamp } from "../utils";
+import { getAuthHeaders, handleAuthError } from "../lib/auth";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface AddCardModalProps {
   columnaId: string;
   tableroId: string;
   sprintId: string;
+  parentId?: string | null;
   onClose: () => void;
 }
 
@@ -13,6 +17,7 @@ export function AddCardModal({
   columnaId,
   tableroId,
   sprintId,
+  parentId = null,
   onClose,
 }: AddCardModalProps) {
   const { updateState } = useBoardroom();
@@ -21,6 +26,35 @@ export function AddCardModal({
   const [descripcion, setDescripcion] = useState("");
   const [esfuerzo, setEsfuerzo] = useState<Esfuerzo | "">("");
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
+  const [fechaVencimiento, setFechaVencimiento] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const handleSuggest = async () => {
+    if (!titulo.trim()) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ tipo: "autodesc", titulo: titulo.trim() }),
+      });
+      if (response.status === 401) {
+        handleAuthError();
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Error con la IA");
+      if (data.descripcion) setDescripcion(data.descripcion);
+      if (data.esfuerzo) setEsfuerzo(data.esfuerzo as Esfuerzo);
+      if (data.prioridad) setPrioridad(data.prioridad as Prioridad);
+    } catch (err: any) {
+      setAiError(err.message || "Ocurrió un error");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSave = () => {
     if (!titulo.trim()) return;
@@ -35,8 +69,9 @@ export function AddCardModal({
       esfuerzo: esfuerzo ? (esfuerzo as Esfuerzo) : undefined,
       prioridad,
       orden: Date.now(),
-      parentId: null,
+      parentId,
       createdAt: Date.now(),
+      fechaVencimiento: dateInputToTimestamp(fechaVencimiento),
     };
 
     updateState((prev: AppState) => ({
@@ -50,7 +85,9 @@ export function AddCardModal({
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
       <div className="bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-[#38383A]">
         <div className="p-4 border-b border-[#38383A]">
-          <h2 className="text-lg font-bold text-white">Nueva Tarea</h2>
+          <h2 className="text-lg font-bold text-white">
+            {parentId ? "Nueva Subtarea" : "Nueva Tarea"}
+          </h2>
         </div>
 
         <div className="p-4 flex flex-col gap-4">
@@ -68,14 +105,44 @@ export function AddCardModal({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-[#8E8E93] mb-1">
-              Descripción
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-semibold text-[#8E8E93]">
+                Descripción
+              </label>
+              <button
+                onClick={handleSuggest}
+                disabled={!titulo.trim() || aiLoading}
+                className="flex items-center gap-1 text-xs font-bold text-[#0A84FF] hover:text-[#007AFF] disabled:opacity-40 transition-colors"
+                title="Sugerir con IA"
+              >
+                {aiLoading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Sparkles size={14} />
+                )}
+                Sugerir con IA
+              </button>
+            </div>
             <textarea
               className="w-full bg-[#2C2C2E] border border-[#38383A] text-white rounded-xl p-3 text-base sm:text-sm focus:ring-2 focus:ring-[#0A84FF] outline-none resize-none min-h-[80px]"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               placeholder="Detalles adicionales..."
+            />
+            {aiError && (
+              <p className="text-xs text-[#FF453A] mt-1 font-medium">{aiError}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#8E8E93] mb-1">
+              Fecha de vencimiento
+            </label>
+            <input
+              type="date"
+              className="w-full bg-[#2C2C2E] border border-[#38383A] text-white rounded-xl p-3 text-base sm:text-sm focus:ring-2 focus:ring-[#0A84FF] outline-none"
+              value={fechaVencimiento}
+              onChange={(e) => setFechaVencimiento(e.target.value)}
             />
           </div>
 
