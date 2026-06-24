@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound, Loader2 } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import { setGeminiKey } from '../lib/auth';
 
 interface AuthGateProps {
@@ -8,32 +8,12 @@ interface AuthGateProps {
 
 export function AuthGate({ onLogin }: AuthGateProps) {
   const [apiKey, setApiKey] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim()) return;
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch('/api/ping', {
-        headers: { 'X-Gemini-Key': apiKey.trim() },
-      });
-
-      if (res.ok) {
-        setGeminiKey(apiKey.trim());
-        onLogin();
-      } else {
-        setError('No se pudo verificar. Comprueba tu conexión.');
-      }
-    } catch {
-      setError('Error de conexión. Comprueba tu red.');
-    } finally {
-      setLoading(false);
-    }
+    setGeminiKey(apiKey.trim());
+    onLogin();
   };
 
   return (
@@ -62,22 +42,12 @@ export function AuthGate({ onLogin }: AuthGateProps) {
             autoCapitalize="off"
             spellCheck={false}
           />
-          {error && (
-            <p className="text-[#FF453A] text-sm text-center font-medium">{error}</p>
-          )}
           <button
             type="submit"
-            disabled={!apiKey.trim() || loading}
-            className="w-full bg-[#0A84FF] text-white py-3 rounded-xl font-bold hover:bg-[#007AFF] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+            disabled={!apiKey.trim()}
+            className="w-full bg-[#0A84FF] text-white py-3 rounded-xl font-bold hover:bg-[#007AFF] transition-colors disabled:opacity-40"
           >
-            {loading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Verificando...
-              </>
-            ) : (
-              'Entrar'
-            )}
+            Entrar
           </button>
           <p className="text-[#636366] text-xs text-center">
             La key se guarda solo en tu dispositivo
