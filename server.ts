@@ -3,14 +3,28 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
+function checkAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const appSecret = process.env.APP_SECRET;
+  if (!appSecret) return next();
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${appSecret}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
 
+  app.get('/api/ping', checkAuth, (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
   // API Route for Gemini
-  app.post('/api/gemini', async (req, res) => {
+  app.post('/api/gemini', checkAuth, async (req, res) => {
     try {
       const { tarea, contexto } = req.body;
       const apiKey = process.env.GEMINI_API_KEY;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tarjeta, AppState } from '../types';
 import { useBoardroom } from '../context';
 import { Loader2, AlertCircle, Wand2 } from 'lucide-react';
+import { getAuthHeaders, handleAuthError } from '../lib/auth';
 
 interface AISplitModalProps {
   tarjeta: Tarjeta;
@@ -24,7 +25,7 @@ export function AISplitModal({ tarjeta, onClose }: AISplitModalProps) {
 
       const response = await fetch('/api/gemini', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           tarea: {
             titulo: tarjeta.titulo,
@@ -35,8 +36,13 @@ export function AISplitModal({ tarjeta, onClose }: AISplitModalProps) {
         })
       });
 
+      if (response.status === 401) {
+        handleAuthError();
+        return;
+      }
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Error al conectar con la IA');
       }
