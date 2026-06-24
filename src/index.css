@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-black: #000000;
+}
+
+body {
+  background-color: black;
+  color: #F2F2F7;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
